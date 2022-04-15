@@ -18,6 +18,17 @@ $ go get google.golang.org/grpc
 
 // add sever and client folder and files.
 
-$ go run server-stream/server/server.go
+---
+// run server in a terminal
 
-$ go run server-stream/client/client.go -f name -l lastname
+$ go run grpc-stream/server/server.go
+
+---
+// run client in another terminal for server streaming
+
+$ go run grpc-stream/client/client.go -o 0 -f name -l lastname
+
+---
+// run client in another terminal for client streaming
+
+$ go run grpc-stream/client/client.go -o 1
