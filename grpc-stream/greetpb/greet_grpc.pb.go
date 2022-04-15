@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v3.17.3
-// source: server-stream/greetpb/greet.proto
+// source: grpc-stream/greetpb/greet.proto
 
 package greetpb
 
@@ -24,6 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type GreetServiceClient interface {
 	// server streaming
 	GreetManyTimes(ctx context.Context, in *GreetManyTimesRequest, opts ...grpc.CallOption) (GreetService_GreetManyTimesClient, error)
+	// client streaming
+	GreetAll(ctx context.Context, opts ...grpc.CallOption) (GreetService_GreetAllClient, error)
 }
 
 type greetServiceClient struct {
@@ -66,12 +68,48 @@ func (x *greetServiceGreetManyTimesClient) Recv() (*GreetManyTimesResponse, erro
 	return m, nil
 }
 
+func (c *greetServiceClient) GreetAll(ctx context.Context, opts ...grpc.CallOption) (GreetService_GreetAllClient, error) {
+	stream, err := c.cc.NewStream(ctx, &GreetService_ServiceDesc.Streams[1], "/greet.GreetService/GreetAll", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &greetServiceGreetAllClient{stream}
+	return x, nil
+}
+
+type GreetService_GreetAllClient interface {
+	Send(*GreetManyTimesRequest) error
+	CloseAndRecv() (*GreetManyTimesResponse, error)
+	grpc.ClientStream
+}
+
+type greetServiceGreetAllClient struct {
+	grpc.ClientStream
+}
+
+func (x *greetServiceGreetAllClient) Send(m *GreetManyTimesRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *greetServiceGreetAllClient) CloseAndRecv() (*GreetManyTimesResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(GreetManyTimesResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // GreetServiceServer is the server API for GreetService service.
 // All implementations must embed UnimplementedGreetServiceServer
 // for forward compatibility
 type GreetServiceServer interface {
 	// server streaming
 	GreetManyTimes(*GreetManyTimesRequest, GreetService_GreetManyTimesServer) error
+	// client streaming
+	GreetAll(GreetService_GreetAllServer) error
 	mustEmbedUnimplementedGreetServiceServer()
 }
 
@@ -81,6 +119,9 @@ type UnimplementedGreetServiceServer struct {
 
 func (UnimplementedGreetServiceServer) GreetManyTimes(*GreetManyTimesRequest, GreetService_GreetManyTimesServer) error {
 	return status.Errorf(codes.Unimplemented, "method GreetManyTimes not implemented")
+}
+func (UnimplementedGreetServiceServer) GreetAll(GreetService_GreetAllServer) error {
+	return status.Errorf(codes.Unimplemented, "method GreetAll not implemented")
 }
 func (UnimplementedGreetServiceServer) mustEmbedUnimplementedGreetServiceServer() {}
 
@@ -116,6 +157,32 @@ func (x *greetServiceGreetManyTimesServer) Send(m *GreetManyTimesResponse) error
 	return x.ServerStream.SendMsg(m)
 }
 
+func _GreetService_GreetAll_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(GreetServiceServer).GreetAll(&greetServiceGreetAllServer{stream})
+}
+
+type GreetService_GreetAllServer interface {
+	SendAndClose(*GreetManyTimesResponse) error
+	Recv() (*GreetManyTimesRequest, error)
+	grpc.ServerStream
+}
+
+type greetServiceGreetAllServer struct {
+	grpc.ServerStream
+}
+
+func (x *greetServiceGreetAllServer) SendAndClose(m *GreetManyTimesResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *greetServiceGreetAllServer) Recv() (*GreetManyTimesRequest, error) {
+	m := new(GreetManyTimesRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // GreetService_ServiceDesc is the grpc.ServiceDesc for GreetService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -129,6 +196,11 @@ var GreetService_ServiceDesc = grpc.ServiceDesc{
 			Handler:       _GreetService_GreetManyTimes_Handler,
 			ServerStreams: true,
 		},
+		{
+			StreamName:    "GreetAll",
+			Handler:       _GreetService_GreetAll_Handler,
+			ClientStreams: true,
+		},
 	},
-	Metadata: "server-stream/greetpb/greet.proto",
+	Metadata: "grpc-stream/greetpb/greet.proto",
 }

@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package greet;
-option go_package = "server-stream/greetpb";
+option go_package = "grpc-stream/greetpb";
 
 // model
 message Greeting {
@@ -22,4 +22,7 @@ message GreetManyTimesResponse {
 service GreetService{
   // server streaming
   rpc GreetManyTimes(GreetManyTimesRequest) returns (stream GreetManyTimesResponse) {}
+
+  // client streaming
+  rpc GreetAll(stream GreetManyTimesRequest) returns (GreetManyTimesResponse) {}
 }
